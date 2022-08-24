@@ -21,6 +21,7 @@ use crate::{
 };
 
 use tokio::runtime::Handle;
+use tokio::runtime::Runtime;
 
 /// A reference to an AWS KMS key and client
 pub struct KmsKey {
@@ -161,7 +162,8 @@ impl SigningPublicKey for KmsKey {
                 .signature(Blob::new(sig))
                 .send();
 
-            let handle = Handle::current();
+            let rt  = Runtime::new().unwrap();
+            let handle = rt.handle();
             let reply = handle.block_on(request);
 
             match reply {
@@ -191,7 +193,8 @@ impl SigningPrivateKey for KmsKey {
             .signing_algorithm(self.get_sig_alg_spec())
             .send();
 
-        let handle = Handle::current();
+        let rt  = Runtime::new().unwrap();
+        let handle = rt.handle();
         let signature = handle
             .block_on(request)
             .map_err(CoseError::AwsSignError)?
@@ -230,3 +233,4 @@ impl SigningPrivateKey for KmsKey {
         Ok(signature_bytes)
     }
 }
+
