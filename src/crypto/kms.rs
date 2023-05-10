@@ -7,7 +7,6 @@ use openssl::{
 };
 
 use aws_sdk_kms::{
-    error::{VerifyError, VerifyErrorKind},
     model::{MessageType, SigningAlgorithmSpec},
     types::Blob,
     types::SdkError,
@@ -23,6 +22,7 @@ use crate::{
 use tokio::runtime::Handle;
 
 /// A reference to an AWS KMS key and client
+#[derive(Clone, Debug)]
 pub struct KmsKey {
     client: Client,
     key_id: String,
@@ -166,14 +166,9 @@ impl SigningPublicKey for KmsKey {
 
             match reply {
                 Ok(v) => Ok(v.signature_valid),
-                Err(SdkError::ServiceError {
-                    err:
-                        VerifyError {
-                            kind: VerifyErrorKind::KmsInvalidSignatureException(_),
-                            ..
-                        },
-                    ..
-                }) => Ok(false),
+                Err(SdkError::ServiceError(e)) if e.err().is_kms_invalid_signature_exception() => {
+                    Ok(false)
+                }
                 Err(e) => Err(CoseError::AwsVerifyError(e)),
             }
         }
